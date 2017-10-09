@@ -53,3 +53,5 @@ The following plots compare the performance of three different models for classi
 A new article can be processed by the model using the command `./analyze.py`.  One (and only one), of the following options can be used: '--corpus', '--url=<URL to supported domain>', or '--file=<path/and/file_name>'.  The first option produces some summary plots of the entire corpus.  (Note- this can only be done if you ahve setup and filled the NewsinessDB SQL database.)  The plots are shown below.  The other two options are for processing new articles outside the training/testing corpus.  The results are saved in 'figures/'.  For more details, use `./analyze.py --help`.
 
 ![HIST](figures/distance_after_training_temp.png)
+
+Note the two not-newsy articles from Bloomberg.  Both of those (and only those two) turn out to be from the Opinion page!
