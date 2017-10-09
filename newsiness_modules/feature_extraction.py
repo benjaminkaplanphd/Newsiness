@@ -76,6 +76,7 @@ def extract_training_features(df=None,
     urls = df["url"]
     sources = df["source_name"]
     texts = df["source_text"]
+    times = df["time_found"]
 
     if word2weight is None:
         word2weight = retrieve_word2weight(texts)
@@ -86,15 +87,21 @@ def extract_training_features(df=None,
     sentence_list = []
 
     known_sources = ['reuters', 'associated-press',
-                     'nyteditorials', 'nytcontributors']
+                     'nyteditorials','nytcontributors',
+                     'usa-today','bloomberg',
+                     'the-new-york-times',
+                     'the-washington-post']
+    training_sources = ['reuters','associated-press']
     for source in known_sources:
         features[source] = []
         ground_truth[source] = []
 
     nByURL = 0
     nProcessed = 0
-    for url, source, text in zip(urls, sources, texts):
+    for url, source, text, time in zip(urls, sources, texts, times):
         if source not in known_sources:
+            continue
+        if source in training_sources and time>20170920093859:
             continue
         if len(text) < 5:
             text = st.scrape_text(source, url)

@@ -27,7 +27,7 @@ print 'ready!'
 @app.route('/')
 @app.route('/index')
 def index():
-	if 'uid' not in session:
+	if 'uid' not in session or session["uid"] == 0:
 		uid = np.random.randint(100, size=1)[0]
 		session["uid"] = uid
 	return render_template("index.html")
@@ -46,13 +46,13 @@ def newsiness_analysistr():
 
 	if session['uid'] != 0:
 		url = request.args.get('article_url')
-		body = request.args.get('article_body')
+		body = request.args.get('article_body').encode('utf-8')
 
-		if url is None and body is None:
+		if url == '' and body == '':
 			return render_template("index.html",
 								   message='No input was given')
 
-		if url is not None:
+		if url != '':
 			source = ''
 			if 'reuters' in url:
 				source = 'reuters'
@@ -64,11 +64,13 @@ def newsiness_analysistr():
 				return render_template("index.html",
 									   message='Invalid URL given')
 			body = scrape_text.scrape_text(source=source, url=url).encode('utf-8')
+		else:
+			source = 'User Input'
 
-		if body is None:
+		if body == '':
 			return render_template("index.html",
 								   message='Invalid URL given')
-		print body
+
 		full_vector = nm_fe.text_to_vector(body, con, word2weight)
 		result = classifier.predict(full_vector.reshape(1, -1))[0]
 		prob = float(classifier.predict_proba(full_vector.reshape(1, -1))[0][0])
