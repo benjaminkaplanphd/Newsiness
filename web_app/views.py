@@ -6,6 +6,7 @@ from newsiness_modules import text_utils as nm_tu
 from newsiness_modules import newsiness_utils as nutils
 from newsiness_modules import word2vector_utils as w2v_utils
 from newsiness_modules import scrape_text
+from newsiness_modules import newsiness_plots as nm_np
 import psycopg2
 import pickle
 import numpy as np
@@ -60,6 +61,12 @@ def newsiness_analysistr():
 				source = 'associated-press'
 			elif 'nyt' in url:
 				source = 'nyt'
+			elif 'washingtonpost' in url:
+				source = 'the-washington-post'
+			elif 'bloomberg' in url:
+				source = 'bloomberg'
+			elif 'usatoday' in url:
+				source = 'usatoday'
 			if source == '':
 				return render_template("index.html",
 									   message='Invalid URL given')
@@ -71,72 +78,8 @@ def newsiness_analysistr():
 			return render_template("index.html",
 								   message='Invalid URL given')
 
-		full_vector = nm_fe.text_to_vector(body, con, word2weight)
-		result = classifier.predict(full_vector.reshape(1, -1))[0]
-		prob = float(classifier.predict_proba(full_vector.reshape(1, -1))[0][0])
-		prob *= 100.
-		distance = classifier.decision_function(full_vector.reshape(1, -1))[0]
-		if result == 'news':
-			the_result = 'NEWSY'
-		else:
-			the_result = 'NOT NEWSY'
-			prob = 100. - prob
-		prob = "%.2f" % prob
-
-		sentences = nm_tu.text_to_sentences(body)
-
-		sentence_vectors = {}
-		word_vectors = {}
-		s_out = []
-		for s in sentences:
-			s_for_vec = nm_tu.get_clean_sentence(s)
-			if s_for_vec is None:
-				result = "Quote"
-				s_out.append(dict(result=result, sentence=s, prob='-', distance='-'))
-				continue
-
-			doc_vec = nm_fe.sentence_to_vector(s_for_vec, con, word2weight)
-			if len(doc_vec.reshape(1, -1)[0]) != 300:
-				continue
-			result = classifier.predict(doc_vec.reshape(1, -1))[0]
-			s_prob = float(classifier.predict_proba(doc_vec.reshape(1, -1))[0][0])
-			s_prob *= 100.
-			s_distance = "%.2f" % classifier.decision_function(doc_vec.reshape(1, -1))[0]
-			if result == 'news':
-				result = 'Newsy'
-			else:
-				result = "Not"
-				s_prob = 100. - s_prob
-			s_prob = "%.2f" % s_prob
-			for w in nm_tu.text_to_wordlist(s_for_vec):
-				w_vector = w2v_utils.get_vector(con, w)
-				if w_vector is None:
-					continue
-				if w not in word_vectors:
-					word_vectors[w] = w_vector * word2weight[w]
-			s_out.append(dict(result=result, sentence=s, prob=s_prob, distance=s_distance))
-			sentence_vectors[s] = doc_vec
-
-		nutils.get_clouds(w_vectors=word_vectors,
-						  s_vectors=sentence_vectors,
-						  w_nTop=20,
-						  s_nTop=5,
-						  classifier=classifier,
-						  uid=session['uid'])
-
-		nutils.get_bars(w_vectors=word_vectors,
-						s_vectors=sentence_vectors,
-						w_nTop=10,
-						s_nTop=5,
-						classifier=classifier,
-						uid=session['uid'])
-		plt.close("all")
-		hist = pickle.load(file=open('inputs/histogram_inputs.pickle', 'rb'))
-		plt.hist(hist, bins=40, range=(-5,5), alpha=0.5, label=source, color="blue", normed=True)
-		plt.hist((distance), weights=[0.25], color="red")
-		plt.xticks([-3, -1, 0, 1, 3], ('Newsy', '-1', '0', '1', 'Not-Newsy'),size="xx-large")
-		plt.yticks([])
-		plt.savefig('web_app/static/images/histogram%d.png' % session['uid'], bbox_inches='tight', transparent=True)
+		the_result, prob, distance, s_out = nm_nu.process_article(body, con, word2weight, classifier, session['uid'], 'web_app/static/images/')
+		nm_np.plot_histogram(distance, source, 'web_app/static/images/histogram%d.png' % session['uid'])
 
 	else:
 		demo_results = pickle.load(file=open('inputs/demo_results.pickle', 'rb'))

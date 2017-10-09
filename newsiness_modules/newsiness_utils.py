@@ -6,6 +6,9 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn import svm
 import wordcloud
 import matplotlib.pyplot as plt
+from newsiness_modules import feature_extraction as nm_fe
+from newsiness_modules import text_utils as nm_tu
+from newsiness_modules import word2vector_utils as w2v_utils
 
 
 def get_trained_classifier(features, types):
@@ -34,7 +37,7 @@ def get_tfidf_weight_map(texts):
 	return word2weight
 
 
-def get_clouds(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None):
+def get_clouds(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None, path='web_app/static/images/'):
 
 	if uid is None:
 		uid = 0
@@ -60,9 +63,9 @@ def get_clouds(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None):
 	wc = wordcloud.WordCloud(max_words=20, width=250, height=300)
 
 	wc.generate_from_frequencies(w_freq_pos)
-	wc.to_file('web_app/static/images/wCloud_N%d.jpg' % uid)
+	wc.to_file(path + 'wCloud_N%d.jpg' % uid)
 	wc.generate_from_frequencies(w_freq_neg)
-	wc.to_file('web_app/static/images/wCloud_O%d.jpg' % uid)
+	wc.to_file(path + 'wCloud_O%d.jpg' % uid)
 
 	s_results = {}
 	for sent in s_vectors.keys():
@@ -86,14 +89,14 @@ def get_clouds(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None):
 	wc = wordcloud.WordCloud(max_words=20, width=600, height=200)
 
 	wc.generate_from_frequencies(s_freq_pos)
-	wc.to_file('web_app/static/images/sCloud_N%d.jpg' % uid)
+	wc.to_file(path + 'sCloud_N%d.jpg' % uid)
 	wc.generate_from_frequencies(s_freq_neg)
-	wc.to_file('web_app/static/images/sCloud_O%d.jpg' % uid)
+	wc.to_file(path + 'sCloud_O%d.jpg' % uid)
 
 	return
 
 
-def get_bars(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None):
+def get_bars(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None, path='web_app/static/images/'):
 	w_results = {}
 	for word in w_vectors:
 	    vector = w_vectors[word]
@@ -129,7 +132,7 @@ def get_bars(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None):
 	#plt.xlabel('Relative Score',size='xx-large')
 	plt.xticks([-1,0],('MOST',''), size='xx-large')
 	plt.title("%d Most Newsy Words"%nTop,size=25)
-	plt.savefig('web_app/static/images/article_word_rankings_%d.png' % uid, bbox_inches='tight')
+	plt.savefig(path+'article_word_rankings_%d.png' % uid, bbox_inches='tight')
 
 	s_results = {}
 	for s in s_vectors:
@@ -160,7 +163,7 @@ def get_bars(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None):
 	#plt.xlabel('Relative Score',size='xx-large')
 	plt.xticks([1.05*max(res[top_pos]),0],("LEAST",""),size="xx-large")
 	plt.title("Least Newsy Sentences",size=25)
-	plt.savefig('web_app/static/images/article_notnewsy_sentences_%d.png' % uid, bbox_inches='tight')
+	plt.savefig(path + 'article_notnewsy_sentences_%d.png' % uid, bbox_inches='tight')
 
 	plt.figure(figsize=(20, 5))
 	sp = plt.subplot(111)
@@ -169,4 +172,73 @@ def get_bars(classifier, w_vectors, s_vectors, w_nTop, s_nTop, uid=None):
 	sp.yaxis.tick_right()
 	plt.xticks([1.05*min(res[top_neg]),0],("MOST",""),size="xx-large")
 	plt.title("Most Newsy Sentences",size=25)
-	plt.savefig('web_app/static/images/article_newsy_sentences_%d.png' % uid, bbox_inches='tight')
+	plt.savefig(path + 'article_newsy_sentences_%d.png' % uid, bbox_inches='tight')
+
+def process_article(body, con, word2weight, classifier, uid, path, w2v=None):
+	full_vector = nm_fe.text_to_vector(body, con, word2weight, w2v)
+	result = classifier.predict(full_vector.reshape(1, -1))[0]
+	prob = float(classifier.predict_proba(full_vector.reshape(1, -1))[0][0])
+	prob *= 100.
+	distance = classifier.decision_function(full_vector.reshape(1, -1))[0]
+	if result == 'news':
+		the_result = 'NEWSY'
+	else:
+		the_result = 'NOT NEWSY'
+		prob = 100. - prob
+	prob = "%.2f" % prob
+
+	sentences = nm_tu.text_to_sentences(body)
+
+	sentence_vectors = {}
+	word_vectors = {}
+	s_out = []
+	for s in sentences:
+		s_for_vec = nm_tu.get_clean_sentence(s)
+		if s_for_vec is None:
+			result = "Quote"
+			s_out.append(dict(result=result, sentence=s, prob='-', distance='-'))
+			continue
+
+		doc_vec = nm_fe.sentence_to_vector(s_for_vec, con, word2weight, w2v)
+		if len(doc_vec.reshape(1, -1)[0]) != 300:
+			continue
+		result = classifier.predict(doc_vec.reshape(1, -1))[0]
+		s_prob = float(classifier.predict_proba(doc_vec.reshape(1, -1))[0][0])
+		s_prob *= 100.
+		s_distance = "%.2f" % classifier.decision_function(doc_vec.reshape(1, -1))[0]
+		if result == 'news':
+			result = 'Newsy'
+		else:
+			result = "Not"
+			s_prob = 100. - s_prob
+		s_prob = "%.2f" % s_prob
+		for w in nm_tu.text_to_wordlist(s_for_vec):
+			if con is not None:
+				w_vector = w2v_utils.get_vector(con, w)
+			elif w not in w2v:
+				continue
+			else:
+				w_vector = w2v[w]
+			if w_vector is None:
+				continue
+			if w not in word_vectors:
+				word_vectors[w] = w_vector * word2weight[w]
+		s_out.append(dict(result=result, sentence=s, prob=s_prob, distance=s_distance))
+		sentence_vectors[s] = doc_vec
+
+	get_clouds(w_vectors=word_vectors,
+			   s_vectors=sentence_vectors,
+			   w_nTop=20,
+			   s_nTop=5,
+			   classifier=classifier,
+			   uid=uid,
+			   path=path)
+
+	get_bars(w_vectors=word_vectors,
+					s_vectors=sentence_vectors,
+					w_nTop=10,
+					s_nTop=5,
+					classifier=classifier,
+					uid=uid,
+					path=path)
+	return the_result, prob, distance, s_out

@@ -42,6 +42,15 @@ This section describes how to re-train and validate the model.
 
 If you chose to create and fill your own article SQL database, you can simply run `./train_model.py`, otherwise execute `./train_model.py --redo=False` to use the default corpus.  You can add additional classification algorithms with the options: `--doRF=True` (for a Random Forest model) and/or `--doLR=True` (for a Logistic Regression model).  If you are using the default option `--redo=True`, you have the addional choice of which pre-trained [GloVe](https://nlp.stanford.edu/projects/glove/) model you would like to use.  Use the option `--nDim=x`, with x equal to 50, 100, 200 or 300 (the default).  For a full list of options, use `./train_model.py`.
 
+The following plots compare the performance of three different models for classification: SVM, Logistic Regression (LR), and Random Forest (RF).  As expected, SVM (with a linear kernal) and LR have very similar performance.  The SVM is chosen for the more natural vector interpretation of its results.  The RF underperforms the other two, but it should be noted that it has not been tuned for this specific problem.  However, the best we could expect, from tuning the model, would be comparable performance to the two linear methods.  Since SVM is mroe easily interpretted, there is no strong motivation to switch to RF.
+
 ![ROC](figures/SVM_ROC_curvetemp_model.png)
 
 ![LC](figures/SVM_learning_curvetemp_model.png)
+
+## Analyzing New Articles
+
+A new article can be processed by the model using the command `./analyze.py`.  One (and only one), of the following options can be used: '--corpus', '--url=<URL to supported domain>', or '--file=<path/and/file_name>'.  The first option produces some summary plots of the entire corpus.  (Note- this can only be done if you ahve setup and filled the NewsinessDB SQL database.)  The plots are shown below.  The other two options are for processing new articles outside the training/testing corpus.  The results are saved in 'figures/'.  For more details, use `./analyze.py --help`.
+
+![HIST](figures/distance_after_training_temp.png)
+

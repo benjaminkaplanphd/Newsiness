@@ -75,12 +75,12 @@ def main(argv):
 	try:
 		opts, args = getopt.getopt(argv, "h", ["help", "redo", "doRF", "doLR", "nDim=", "modelName=", "DBuser="])
 	except getopt.GetoptError:
-		print 'test.py [-h --help --redo=<bool> --doRF=<bool> --doLR=<bool> --nDim=<int> --modelName=<str> --DBuser=<str>]'
+		print 'test.py [-h --help --redo --doRF --doLR --nDim=<int> --modelName=<str> --DBuser=<str>]'
 		sys.exit(2)
 	for opt, arg in opts:
 		if opt in ('-h', '--help'):
 			print """
-				test.py [-h --help --redo=<bool> --doRF=<bool> --doLR=<bool> --nDim=<int> --dir=<str>]'
+				test.py [-h --help --redo --doRF --doLR --nDim=<int> --dir=<str>]'
 					-h --help     : Displays this help menu'
 					--redo : Redo the training.  Requires access to the local SQL database with news articles.'
 					--doRF : Adds a Random Forest model to the list of classifiers

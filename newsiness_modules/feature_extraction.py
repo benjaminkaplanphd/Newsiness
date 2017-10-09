@@ -28,7 +28,8 @@ def retrieve_word2weight(texts=None):
 
 def text_to_vector(text=None,
                    con=None,
-                   word2weight=None):
+                   word2weight=None,
+                   w2v=None):
     out_vector = []
     text = tu.text_link_cleanup(text)
     text = tu.text_quote_cleanup(text)
@@ -39,7 +40,10 @@ def text_to_vector(text=None,
         if s_for_vec is None:
             continue
         for w in tu.text_to_wordlist(s_for_vec):
-            w_vector = w2v_utils.get_vector(con, w)
+            if con is not None:
+                w_vector = w2v_utils.get_vector(con, w)
+            elif w in w2v:
+                w_vector = w2v[w]
             if w_vector is None:
                 continue
             out_vector.append(w_vector * word2weight[w])
@@ -48,13 +52,17 @@ def text_to_vector(text=None,
 
 def sentence_to_vector(sentence=None,
                        con=None,
-                       word2weight=None):
+                       word2weight=None,
+                       w2v=None):
     out_vector = []
     sentence = tu.get_clean_sentence(sentence)
     if sentence is None:
         return out_vector
     for w in tu.text_to_wordlist(sentence):
-        w_vector = w2v_utils.get_vector(con, w)
+        if con is not None:
+            w_vector = w2v_utils.get_vector(con, w)
+        elif w in w2v:
+            w_vector = w2v[w]
         if w_vector is None:
             continue
         out_vector.append(w_vector * word2weight[w])
