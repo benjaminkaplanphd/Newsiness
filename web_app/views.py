@@ -20,7 +20,7 @@ word2weight = nutils.get_tfidf_weight_map(corpus)
 
 con = psycopg2.connect(database='WORD2VECTOR',
 					   host='localhost',
-					   user='kaplan',
+					   user='ubuntu',
 					   password='12345')
 
 print 'ready!'
@@ -78,7 +78,7 @@ def newsiness_analysistr():
 			return render_template("index.html",
 								   message='Invalid URL given')
 
-		the_result, prob, distance, s_out = nm_nu.process_article(body, con, word2weight, classifier, session['uid'], 'web_app/static/images/')
+		the_result, prob, distance, s_out = nutils.process_article(body, con, word2weight, classifier, session['uid'], 'web_app/static/images/')
 		nm_np.plot_histogram(distance, source, 'web_app/static/images/histogram%d.png' % session['uid'])
 
 	else:
